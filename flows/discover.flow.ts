@@ -24,7 +24,9 @@ export class DiscoverFlow {
     if (options.rating) await this.page.selectRating(options.rating);
   }
 
-  async navigateToPageAndBack(targetPage: number): Promise<{ startTitles: string[]; endTitles: string[] }> {
+  async navigateToPageAndBack(
+    targetPage: number,
+  ): Promise<{ startTitles: string[]; endTitles: string[] }> {
     const startTitles = await this.page.titles();
     for (let i = 1; i < targetPage; i++) {
       await this.page.goToNextPage();

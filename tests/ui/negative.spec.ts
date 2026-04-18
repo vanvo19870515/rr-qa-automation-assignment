@@ -1,37 +1,61 @@
 import { test, expect } from '../../core/driver/base.fixture';
-import { waitForTmdbResponse } from '../../utils/network.interceptor';
+import { waitForTmdbResponseByQuery } from '../../utils/network.interceptor';
 import { assertNoDuplicateTitles } from '../../utils/assertions';
+import { assertContentLoaded, assertSearchHasVisibleMatch } from './steps/discover.steps';
 
 test.describe('Negative and boundary scenarios @regression', () => {
-  test('NEG01 – Search with special characters keeps app stable', async ({ homePage, page }) => {
+  test('NEG01 – Search with special characters keeps app stable', async ({ homePage }) => {
     const query = '@@@###$$$';
+
+    // Arrange
     await homePage.searchByTitle(query);
-    await page.waitForLoadState('networkidle');
-    await expect(homePage.results.movieCards.first()).toBeVisible({ timeout: 15_000 });
+
+    // Act + Assert
+    await assertContentLoaded(homePage);
   });
 
-  test('NEG02 – Excessively long search does not crash UI', async ({ homePage, page }) => {
+  test('NEG02 – Excessively long search does not crash UI', async ({ homePage }) => {
+    // Arrange
     const longQuery = 'a'.repeat(200);
+
+    // Act
     await homePage.searchByTitle(longQuery);
-    await page.waitForLoadState('networkidle');
-    const hasGrid = await homePage.results.movieCards.first().isVisible().catch(() => false);
+
+    // Assert
+    const hasGrid = await homePage.results.movieCards
+      .first()
+      .isVisible()
+      .catch(() => false);
     const hasEmpty = await homePage.results.noResults.isVisible().catch(() => false);
     expect(hasGrid || hasEmpty).toBeTruthy();
   });
 
-  test('NEG03 – Invalid year range is handled gracefully', async ({ homePage, page }) => {
+  test('NEG03 – Invalid year range is handled gracefully', async ({ homePage }) => {
+    // Arrange + Act
     await homePage.filters.selectYearRange(2026, 2020);
-    await page.waitForLoadState('networkidle');
-    const hasGrid = await homePage.results.movieCards.first().isVisible().catch(() => false);
+
+    // Assert
+    const hasGrid = await homePage.results.movieCards
+      .first()
+      .isVisible()
+      .catch(() => false);
     const hasEmpty = await homePage.results.noResults.isVisible().catch(() => false);
     const hasError = await homePage.results.errorMessage.isVisible().catch(() => false);
     expect(hasGrid || hasEmpty || hasError).toBeTruthy();
   });
 
-  test('BVA01 – Pagination next/prev preserves deterministic page state', async ({ homePage, page }) => {
-    const page2Api = waitForTmdbResponse(page, /movie\/popular\?page=2/);
+  test('BVA01 – Pagination next/prev preserves deterministic page state', async ({
+    homePage,
+    page,
+  }) => {
+    // Arrange
+    const page2Api = waitForTmdbResponseByQuery(page, '/movie/popular', { page: '2' });
+
+    // Act
     await homePage.results.goToNextPage();
     const page2Data = await page2Api;
+
+    // Assert
     expect(page2Data.page).toBe(2);
     expect(await homePage.results.getCurrentPage()).toBe(2);
 
@@ -42,8 +66,12 @@ test.describe('Negative and boundary scenarios @regression', () => {
   test('BVA02 – Search results should not contain duplicate visible titles in first page', async ({
     homePage,
   }) => {
+    // Arrange + Act
     await homePage.searchByTitle('Batman');
     const titles = await homePage.results.titles();
+
+    // Assert
+    assertSearchHasVisibleMatch(titles, 'batman');
     assertNoDuplicateTitles(titles);
   });
 });

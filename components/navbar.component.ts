@@ -1,5 +1,6 @@
 import type { Page, Locator } from '@playwright/test';
 import { rootLogger } from '../utils/logger';
+import { SELECTORS } from '../config/selectors';
 
 type CategoryLabel = 'Popular' | 'Trend' | 'Newest' | 'Top rated';
 
@@ -10,7 +11,7 @@ export class NavbarComponent {
   readonly searchInput: Locator;
 
   constructor(private readonly page: Page) {
-    this.searchInput = page.getByPlaceholder('SEARCH');
+    this.searchInput = page.locator(SELECTORS.navbar.searchInput).first();
   }
 
   link(name: CategoryLabel): Locator {

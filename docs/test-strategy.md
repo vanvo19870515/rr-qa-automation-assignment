@@ -85,4 +85,4 @@ GitHub Actions workflow triggers on push/PR to main:
 3. `npm test` (runs full suite)
 4. Upload `reports/` and `logs/` as artifacts
 
-See `.github/workflows/ci.yml` for implementation.
+See `.github/workflows/test.yml` for implementation.

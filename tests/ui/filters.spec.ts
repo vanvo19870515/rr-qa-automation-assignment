@@ -1,8 +1,14 @@
 import { test, expect } from '../../core/driver/base.fixture';
-import { waitForTmdbResponse } from '../../utils/network.interceptor';
+import { waitForTmdbResponse, waitForTmdbResponseByQuery } from '../../utils/network.interceptor';
 import { CATEGORIES, GENRE_IDS, ITEMS_PER_PAGE, API_PATTERNS } from '../../config/constants';
 import { loadFixture } from '../../utils/data.loader';
 import { env } from '../../config/env';
+import {
+  assertCategorySwitchChangesContent,
+  assertCardsRenderedAndFirstTitleVisible,
+  assertSearchContainsExpectedMatch,
+  assertUiApiCountConsistency,
+} from './steps/discover.steps';
 
 interface SearchQuery {
   query: string;
@@ -19,36 +25,15 @@ const searchData = loadFixture<SearchFixture>('search-queries.json');
 const hasTmdbApiKey = Boolean(env.tmdb.apiKey);
 
 test('TC01 – Home page loads with movie cards @smoke', async ({ app, page, log }) => {
-  await test.step('Verify URL redirected to /popular', async () => {
-    await expect(page).toHaveURL(/popular/);
-  });
-
-  const count = await test.step('Verify movie cards are rendered', async () => {
-    const c = await app.cardCount();
-    expect(c).toBe(ITEMS_PER_PAGE);
-    return c;
-  });
-
-  await test.step('Verify first title is non-empty', async () => {
-    const titles = await app.titles();
-    expect(titles.length).toBeGreaterThan(0);
-    expect(titles[0].trim().length).toBeGreaterThan(0);
-    log.info(`${count} cards, first: "${titles[0]}"`);
-  });
+  await expect(page).toHaveURL(/popular/);
+  await assertCardsRenderedAndFirstTitleVisible(app, log, ITEMS_PER_PAGE);
 });
 
 if (hasTmdbApiKey) {
   test('TC02 – Popular data matches TMDB API @smoke', async ({ app, api, page, log }) => {
-  await test.step('Verify URL is /popular', async () => {
     await expect(page).toHaveURL(/popular/);
-  });
-
-  await test.step('Cross-validate card count against API', async () => {
     const apiData = await api.popularMovies();
-    const uiCount = await app.cardCount();
-    expect(uiCount).toBe(apiData.results.length);
-    log.info(`UI ${uiCount} == API ${apiData.results.length}`);
-  });
+    await assertUiApiCountConsistency(app, apiData.results.length, log);
   });
 } else {
   test('TC02 – Popular data matches TMDB API @smoke', () => {
@@ -58,25 +43,13 @@ if (hasTmdbApiKey) {
 
 for (const cat of CATEGORIES.filter((c) => c.label !== 'Popular')) {
   test(`TC03-05 – Navigate to ${cat.label} @regression`, async ({ app, page, log }) => {
-    const popularTitles = await app.titles();
-
-    await test.step(`Click "${cat.label}" tab`, async () => {
-      const [apiData] = await Promise.all([
-        waitForTmdbResponse(page, cat.apiPattern),
-        app.selectCategory(cat.label),
-      ]);
-      expect(apiData.results.length).toBeGreaterThan(0);
-    });
-
-    await test.step('Verify URL updated', async () => {
-      await expect(page).toHaveURL(new RegExp(cat.slug));
-    });
-
-    await test.step('Verify content differs from Popular', async () => {
-      const newTitles = await app.titles();
-      expect(newTitles.length).toBeGreaterThan(0);
-      expect(newTitles).not.toEqual(popularTitles);
-      log.info(`${cat.label} → ${newTitles.length} items`);
+    await assertCategorySwitchChangesContent({
+      app,
+      page,
+      category: cat.label,
+      categorySlug: cat.slug,
+      apiPattern: cat.apiPattern,
+      log,
     });
   });
 }
@@ -103,19 +76,12 @@ test('TC06 – Direct slug /popular returns 404 @defect', async ({ app, page, lo
 test('TC07 – Search returns matching results @regression', async ({ app, page, log }) => {
   const { query, matchPattern } = searchData.validSearch;
 
-  const apiCount = await test.step(`Type "${query}" and wait for API`, async () => {
-    const apiPromise = waitForTmdbResponse(page, new RegExp(`search/movie.*query=${query}`, 'i'));
-    await app.searchByTitle(query);
-    const apiData = await apiPromise;
-    expect(apiData.results.length).toBeGreaterThan(0);
-    return apiData.results.length;
-  });
-
-  await test.step('Verify UI shows matching title', async () => {
-    const titles = await app.titles();
-    const match = titles.some((t) => new RegExp(matchPattern!, 'i').test(t));
-    expect(match).toBeTruthy();
-    log.info(`${titles.length} UI results, API ${apiCount}`);
+  await assertSearchContainsExpectedMatch({
+    app,
+    page,
+    query,
+    matchPattern: matchPattern ?? query,
+    log,
   });
 });
 
@@ -123,8 +89,7 @@ test('TC08 – Search for nonexistent title shows empty state @regression', asyn
   const { query, expectedResults } = searchData.emptySearch;
 
   await test.step(`Type "${query}"`, async () => {
-    const pattern = new RegExp(`search/movie.*query=${query}`, 'i');
-    const apiPromise = waitForTmdbResponse(page, pattern);
+    const apiPromise = waitForTmdbResponseByQuery(page, 'search/movie', { query });
     await app.searchByTitle(query);
     const apiData = await apiPromise;
     expect(apiData.total_results).toBe(expectedResults);
@@ -137,11 +102,8 @@ test('TC08 – Search for nonexistent title shows empty state @regression', asyn
 
 if (hasTmdbApiKey) {
   test('TC09 – Default type is Movie @smoke', async ({ app, api }) => {
-  await test.step('Cross-validate with API', async () => {
     const apiData = await api.popularMovies();
-    const uiCount = await app.cardCount();
-    expect(uiCount).toBe(apiData.results.length);
-  });
+    await assertUiApiCountConsistency(app, apiData.results.length);
   });
 } else {
   test.skip('TC09 – Default type is Movie @smoke', () => {});
@@ -274,7 +236,11 @@ test('TC15 – Combined Genre + Rating filters @regression', async ({ app, page,
   });
 });
 
-test('DEF-03 – TV search calls search/movie instead of search/tv @defect', async ({ app, page, log }) => {
+test('DEF-03 – TV search calls search/movie instead of search/tv @defect', async ({
+  app,
+  page,
+  log,
+}) => {
   await test.step('Switch to TV Shows', async () => {
     await app.selectType('TV Shows');
   });

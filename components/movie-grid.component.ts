@@ -1,4 +1,5 @@
 import type { Page, Locator } from '@playwright/test';
+import { SELECTORS } from '../config/selectors';
 
 /**
  * Reusable movie grid component — cards, titles, meta, empty/error states.
@@ -11,9 +12,9 @@ export class MovieGridComponent {
   readonly errorMessage: Locator;
 
   constructor(page: Page) {
-    this.cards = page.locator('.grid > div');
-    this.titles = page.locator('.grid > div .text-blue-500.font-bold');
-    this.meta = page.locator('.grid > div .text-gray-500.font-light');
+    this.cards = page.locator(SELECTORS.results.cards);
+    this.titles = page.locator(SELECTORS.results.titles);
+    this.meta = page.locator(SELECTORS.results.meta);
     this.noResults = page.getByText('No results found.');
     this.errorMessage = page.getByText('Something went wrong');
   }
