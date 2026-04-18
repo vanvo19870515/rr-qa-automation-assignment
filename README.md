@@ -1,159 +1,179 @@
-# TMDB Discover QA Automation Framework
+# TMDB Discover - Production QA Automation Framework
 
-Production-grade Playwright + TypeScript framework for validating:
+Senior-level QA automation framework for:
 https://tmdb-discover.surge.sh/
 
-This repository is structured as a maintainable, scalable, CI-ready automation solution that keeps existing test behavior while raising architecture and quality standards.
+This repository is structured as a scalable SDET framework with clean architecture, Page Object Model, API abstraction, structured logging, reporting, and CI-ready test suites.
 
-## 1) Project Overview
+## Project Overview
 
-The suite validates:
-- category navigation (Popular, Trend, Newest, Top rated)
-- filtering (Type, Genre, Rating, Year range)
-- pagination flows and edge behavior
-- API contract correctness
-- UI/API consistency for critical scenarios
-- known defects tracking without destabilizing CI
+The AUT is a TMDB-like movie/TV discovery SPA with:
+- category navigation (Popular / Trend / Newest / Top rated)
+- filter panel (type, genre, year, rating, title)
+- pagination with known edge defects
+- backend-driven content via TMDB-style endpoints
 
-## 2) Refactored Folder Structure
+The framework validates UI behavior, API contract integrity, and UI/API consistency while preserving defect visibility for known application issues.
+
+## Architecture
+
+### Target architecture (implemented via source façade + active modules)
 
 ```text
-.
-├── tests/
-│   ├── ui/                      # UI specs only (Arrange/Act/Assert orchestration)
-│   │   └── steps/               # Reusable UI test steps
-│   └── api/                     # API contract + API-mock specs
-├── pages/                       # Page Objects (domain-level UI actions)
-├── components/                  # Reusable UI components
-├── services/
-│   └── api/                     # API client, models, validators, service facade
-├── core/
-│   └── driver/                  # Base fixture and base page abstractions
-├── utils/                       # Shared helpers (logger, network, assertions, loader)
-├── config/                      # Runtime config, constants, selector catalog
-├── fixtures/                    # Primary reusable fixture files (JSON)
-├── data/                        # Environments + API mock payloads
-├── .github/workflows/test.yml   # CI pipeline
-└── docs/
+src/
+  core/
+    config/
+    logger/
+    api/
+    reporting/
+  pages/
+  components/
+  utils/
+  data/
+tests/
+  ui/
+  api/
+  e2e/
+reports/
+docs/
 ```
 
-## 3) Architecture Decisions (and Why)
+### Actual implementation mapping
 
-- **Tests vs logic separation**
-  - Specs hold expectations and business assertions.
-  - Locators and UI behavior are encapsulated in pages/components.
-  - Result: simpler, readable tests and easier maintenance.
+- `src/core/*` re-exports and centralizes production-facing entry points
+- operational modules currently live in:
+  - `core/`, `config/`, `services/api/`, `pages/`, `components/`, `utils/`, `data/`
+- test suites:
+  - `tests/ui` for UI flows
+  - `tests/api` for API contract and mock scenarios
+  - `tests/e2e` for end-to-end business journeys
 
-- **API testing layer**
-  - `services/api/client/api-client.ts` centralizes transport and error handling.
-  - `services/api/tmdb.service.ts` exposes domain endpoints.
-  - `services/api/validators` enforces runtime response shape.
-  - Result: stronger API contract confidence and safer UI/API cross-checks.
+This allows a non-breaking migration path while maintaining runtime stability.
 
-- **Selector governance**
-  - `config/selectors.ts` centralizes selectors with `data-testid`-first + fallback strategy.
-  - Result: reduced duplication and easier selector evolution.
+## Design Patterns Used
 
-- **Reusable AAA test steps**
-  - `tests/ui/steps/discover.steps.ts` contains reusable Arrange/Act/Assert helpers.
-  - Result: less repetition and consistent test intent.
+- **Page Object Model**: UI behavior encapsulated in page/component classes
+- **Factory pattern (test data)**: fixture-driven test inputs from `/fixtures` and data helpers
+- **Singleton**:
+  - config singleton-like runtime surface (`env`)
+  - logger singleton (`core/logger/logger.ts`)
+- **API abstraction layer**:
+  - generic API client (`services/api/client/api-client.ts`)
+  - domain service (`services/api/tmdb.service.ts`)
+  - runtime schema validation (`services/api/validators`)
 
-## 4) Test Strategy Highlights
+## Test Strategy
 
-Design techniques used:
-- **BVA**: pagination boundaries, page transitions, limits
-- **EP**: valid vs invalid search/filter input classes
-- **Decision-table thinking**: combined filters (type + genre + rating)
-- **Negative testing**: malformed searches, invalid ranges, edge navigation
+Detailed strategy: `docs/test-strategy.md` and `TEST_STRATEGY.md`
 
-Coverage includes:
-- happy-path UI flows
-- API contract assertions
-- network-intercept checks with query validation
-- API mock scenarios (empty/error/custom payload)
-- defect-focused cases (`@defect`) for known product issues
+Includes:
+- Equivalence Partitioning
+- Boundary Value Analysis
+- Negative testing
+- Risk-based prioritization
 
-See `TEST_STRATEGY.md` for full strategy details.
+Coverage highlights:
+- Filters:
+  - valid/invalid year range
+  - rating boundaries
+  - empty genre
+  - invalid category slug behavior
+- Pagination:
+  - page 1, middle page
+  - last-page defect behavior
+  - invalid/high page handling
 
-## 5) Playwright Configuration Standards
+## Reporting and Logging
 
-Configured in `playwright.config.ts`:
-- `baseURL` from environment config
-- CI-safe execution mode (`fullyParallel: false`, `workers: 1` when `CI=true`)
-- `trace: 'on-first-retry'`
-- `screenshot: 'only-on-failure'`
-- `video: 'retain-on-failure'`
-- HTML + JSON reporting
-- browser matrix: chromium/firefox/webkit
+### Reporting
 
-## 6) Logging and Debugging
+- Playwright HTML report: `reports/index.html`
+- JSON report: `reports/results.json`
+- failure artifacts:
+  - screenshot
+  - video
+  - trace on retry
 
-- Winston logger with structured output and contextual messages
-- test-scoped logging through fixture injection
-- sanitized API logging for sensitive query params
-- failure artifacts (screenshots/videos/traces) are attached by Playwright and uploaded in CI
+### Logging
 
-## 7) Run Locally
+- structured logger with levels + timestamps
+- API request/response logs (sanitized)
+- test-step logs
+- error logs
+- log output file:
+  - `reports/logs/test-run.log`
+
+## Test Commands
+
+```bash
+# all tests
+npm test
+
+# split suites
+npm run test:ui
+npm run test:api
+npm run test:e2e
+
+# reports
+npm run report
+```
+
+Additional helper commands are available for smoke/regression/browser-specific runs.
+
+## Local Setup
 
 ```bash
 npm install
 npx playwright install --with-deps
 ```
 
-Optional env profiles:
+Environment profiles:
 - `data/environments/dev.env`
 - `data/environments/staging.env`
 - `data/environments/prod.env`
 
-`TMDB_API_KEY` is required for full API-contract and API cross-check scenarios.
+`TMDB_API_KEY` is required for full API-contract and API-cross-check assertions.
 
-Fixture loading behavior:
-- primary source: `/fixtures`
-- compatibility fallback: `/data/fixtures`
+## CI/CD Approach
 
-Commands:
+Current workflow: `.github/workflows/test.yml`
 
-```bash
-npm test
-npm run test:smoke
-npm run test:regression
-npm run test:api
-npm run test:filters
-npm run test:pagination
-npm run test:negative
-```
+Pipeline flow:
+1. lint + typecheck + format checks
+2. API contract tests (skip when key absent)
+3. cross-browser E2E matrix
+4. artifact upload (reports/test-results/logs)
 
-Quality gates:
+CI design details (strategy, retries, env handling):
+- `docs/ci-cd.md`
 
-```bash
-npm run validate
-```
+## Defect Documentation
 
-## 8) CI/CD
+Documented defects:
+- `docs/defects.md` (primary)
+- `docs/defects-found.md` (legacy alias)
 
-Workflow: `.github/workflows/test.yml`
+Known AUT issues include:
+- pagination last/high pages broken vs API cap
+- direct slug/refresh routing issue
+- filter consistency issues
 
-Pipeline stages:
-1. quality gates (`lint`, `typecheck`, format check)
-2. API contract tests (auto-skip when key missing)
-3. E2E matrix (chromium/firefox/webkit)
-4. artifact upload (`reports`, `test-results`, `logs`)
+## Test Case Documentation
 
-Designed for headless CI execution and deterministic artifacts.
+Detailed cases in:
+- `docs/test-cases.md`
 
-## 9) Known Defects (Tracked by Tests)
+Format includes:
+- ID
+- Description
+- Preconditions
+- Steps
+- Expected result
+- Type (UI / API / E2E)
 
-- **DEF-01**: direct slug (`/popular`) returns 404 (hosting route limitation)
-- **DEF-02**: pagination can render pages beyond TMDB max cap
-- **DEF-03**: TV search still calls `search/movie`
-- **DEF-04**: year filter can emit unstable/mismatched date params
-- **DEF-05**: pagination visibility differs by category
+## Quality Principles
 
-## 10) Extension Guidelines
-
-When adding new coverage:
-- add/extend selectors in `config/selectors.ts`
-- add page/component methods before modifying specs
-- add API models + validators before new endpoint assertions
-- keep reusable fixture data under `/fixtures`
-- keep specs focused on business outcomes, not DOM plumbing
+- DRY, reusable selectors, no duplicated low-level plumbing in tests
+- clear naming and strict TypeScript typing
+- no hardcoded business test data in specs (fixture-driven)
+- maintainability first: tests express business intent, framework handles mechanics

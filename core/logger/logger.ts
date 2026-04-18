@@ -2,7 +2,7 @@ import winston from 'winston';
 import path from 'path';
 import fs from 'fs';
 
-const logDir = path.join(process.cwd(), 'logs');
+const logDir = path.join(process.cwd(), 'reports', 'logs');
 if (!fs.existsSync(logDir)) {
   fs.mkdirSync(logDir, { recursive: true });
 }
@@ -26,7 +26,7 @@ export const logger = winston.createLogger({
       ),
     }),
     new winston.transports.File({
-      filename: path.join(logDir, 'test.log'),
+      filename: path.join(logDir, 'test-run.log'),
       maxsize: 5_242_880,
       maxFiles: 3,
     }),
