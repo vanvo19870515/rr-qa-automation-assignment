@@ -79,6 +79,7 @@ See `TEST_STRATEGY.md` for full strategy details.
 
 Configured in `playwright.config.ts`:
 - `baseURL` from environment config
+- CI-safe execution mode (`fullyParallel: false`, `workers: 1` when `CI=true`)
 - `trace: 'on-first-retry'`
 - `screenshot: 'only-on-failure'`
 - `video: 'retain-on-failure'`
@@ -105,6 +106,10 @@ Optional env profiles:
 - `data/environments/prod.env`
 
 `TMDB_API_KEY` is required for full API-contract and API cross-check scenarios.
+
+Fixture loading behavior:
+- primary source: `/fixtures`
+- compatibility fallback: `/data/fixtures`
 
 Commands:
 
