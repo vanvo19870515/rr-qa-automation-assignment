@@ -13,8 +13,8 @@ export class PaginationComponent {
 
   constructor(private readonly page: Page) {
     this.container = page.locator(SELECTORS.pagination.container);
-    this.previousButton = page.locator(SELECTORS.pagination.previousButton);
-    this.nextButton = page.locator(SELECTORS.pagination.nextButton);
+    this.previousButton = this.container.locator(SELECTORS.pagination.previousButton).first();
+    this.nextButton = this.container.locator(SELECTORS.pagination.nextButton).first();
     this.currentIndicator = page.locator(SELECTORS.pagination.currentIndicator);
   }
 

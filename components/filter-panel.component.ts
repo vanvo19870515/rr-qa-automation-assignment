@@ -45,7 +45,7 @@ export class FilterPanelComponent {
   }
 
   private input(index: number): Locator {
-    return this.panel.locator(SELECTORS.filterPanel.genericInput).nth(index);
+    return this.panel.locator('input').nth(index);
   }
 
   private async openReactSelect(index: number): Promise<void> {
@@ -58,6 +58,11 @@ export class FilterPanelComponent {
   }
 
   private async pickOption(text: string): Promise<void> {
-    await this.page.locator(SELECTORS.filterPanel.option).filter({ hasText: text }).first().click();
+    const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    await this.page
+      .locator(SELECTORS.filterPanel.option)
+      .filter({ hasText: new RegExp(`^\\s*${escaped}\\s*$`, 'i') })
+      .first()
+      .click();
   }
 }
