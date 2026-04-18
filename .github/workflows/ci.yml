@@ -1,0 +1,94 @@
+name: CI Test Suite
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  TEST_ENV: prod
+  TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+
+jobs:
+  lint:
+    name: Lint & Type-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      - run: npm ci
+      - name: ESLint
+        run: npm run lint
+      - name: TypeScript strict check
+        run: npx tsc --noEmit
+
+  test-api:
+    name: API Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: lint
+    steps:
+      - name: Check TMDB API key
+        id: tmdb_key
+        run: |
+          if [ -n "${TMDB_API_KEY}" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::TMDB_API_KEY is not configured. Skipping API contract tests."
+          fi
+      - uses: actions/checkout@v4
+        if: steps.tmdb_key.outputs.available == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.tmdb_key.outputs.available == 'true'
+        with:
+          node-version: '18'
+          cache: 'npm'
+      - run: npm ci
+        if: steps.tmdb_key.outputs.available == 'true'
+      - run: npx playwright install --with-deps chromium
+        if: steps.tmdb_key.outputs.available == 'true'
+      - run: npx playwright test tests/api/tmdb-api --project=chromium
+        if: steps.tmdb_key.outputs.available == 'true'
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.tmdb_key.outputs.available == 'true'
+        with:
+          name: report-api
+          path: reports/
+          retention-days: 14
+
+  test-e2e:
+    name: E2E – ${{ matrix.browser }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npx playwright test --project=${{ matrix.browser }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: report-${{ matrix.browser }}
+          path: reports/
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: traces-${{ matrix.browser }}
+          path: test-results/
+          retention-days: 14
