@@ -1,16 +1,19 @@
 import { test, expect } from '../../core/driver/base.fixture';
 import { waitForTmdbResponse } from '../../utils/network.interceptor';
 import { TMDB_MAX_PAGES, ITEMS_PER_PAGE, API_PATTERNS } from '../../config/constants';
+import { assertResultsLoaded } from './steps/discover.steps';
 
 test('TC16 – Navigate to page 2 @smoke', async ({ homePage, page, log }) => {
-  const page1Titles = await test.step('Record page 1 titles', async () => {
+  // Arrange
+  const page1Titles = await test.step('Arrange: record page 1 titles', async () => {
     const titles = await homePage.results.titles();
     expect(titles.length).toBe(ITEMS_PER_PAGE);
     expect(await homePage.results.hasPagination()).toBeTruthy();
     return titles;
   });
 
-  await test.step('Click Next and intercept API', async () => {
+  // Act + Assert
+  await test.step('Act+Assert: click Next and intercept API', async () => {
     const apiPromise = waitForTmdbResponse(page, API_PATTERNS.moviePopularPage(2));
     await homePage.results.goToNextPage();
     const apiData = await apiPromise;
@@ -26,7 +29,7 @@ test('TC16 – Navigate to page 2 @smoke', async ({ homePage, page, log }) => {
 });
 
 test('TC16b – Forward & backward pagination @regression', async ({ homePage, page, log }) => {
-  await test.step('Navigate to page 2 via API', async () => {
+  await test.step('Act+Assert: navigate to page 2 via API', async () => {
     const api2 = waitForTmdbResponse(page, API_PATTERNS.paginatedPage(2));
     await homePage.results.goToNextPage();
     const data = await api2;
@@ -34,7 +37,7 @@ test('TC16b – Forward & backward pagination @regression', async ({ homePage, p
     expect(await homePage.results.getCurrentPage()).toBe(2);
   });
 
-  await test.step('Navigate to page 3 — API confirms page=3', async () => {
+  await test.step('Act+Assert: navigate to page 3 — API confirms page=3', async () => {
     const api3 = waitForTmdbResponse(page, API_PATTERNS.paginatedPage(3));
     await homePage.results.goToNextPage();
     const data = await api3;
@@ -42,19 +45,19 @@ test('TC16b – Forward & backward pagination @regression', async ({ homePage, p
     expect(await homePage.results.getCurrentPage()).toBe(3);
   });
 
-  await test.step('Navigate back to page 2 — API confirms page=2', async () => {
+  await test.step('Act+Assert: navigate back to page 2 (UI indicator stable)', async () => {
     await homePage.results.goToPreviousPage();
     // WebKit occasionally serves page state from cache without a fresh network hit.
     // UI page indicator is the stable source of truth for back navigation.
     expect(await homePage.results.getCurrentPage()).toBe(2);
-    const visibleCards = await homePage.results.cardCount();
+    const visibleCards = await assertResultsLoaded(homePage, ITEMS_PER_PAGE);
     expect(visibleCards).toBe(ITEMS_PER_PAGE);
     log.info('round-trip verified via API page numbers');
   });
 });
 
 test('TC17 – High page numbers beyond API limit @defect', async ({ homePage, page, log }) => {
-  await test.step('Paginate through first 5 pages successfully', async () => {
+  await test.step('Arrange+Act: paginate through first 5 pages successfully', async () => {
     for (let i = 2; i <= 5; i++) {
       const apiPromise = waitForTmdbResponse(page, API_PATTERNS.paginatedPage(i), 10_000);
       await homePage.results.goToNextPage();
@@ -64,7 +67,7 @@ test('TC17 – High page numbers beyond API limit @defect', async ({ homePage, p
     }
   });
 
-  await test.step(`Verify UI shows pages > ${TMDB_MAX_PAGES}`, async () => {
+  await test.step(`Assert: UI shows pages > ${TMDB_MAX_PAGES}`, async () => {
     const allPageBtns = page.locator('[role="button"]').filter({ hasText: /^\d+$/ });
     const allTexts = await allPageBtns.allTextContents();
     const maxPage = Math.max(...allTexts.map(Number).filter((n) => !isNaN(n)));
@@ -80,7 +83,10 @@ test('TC17 – High page numbers beyond API limit @defect', async ({ homePage, p
   });
 
   await test.step('Click high page — expect error', async () => {
-    const highBtn = page.locator('[role="button"]').filter({ hasText: /^561\d{2}$/ }).first();
+    const highBtn = page
+      .locator('[role="button"]')
+      .filter({ hasText: /^561\d{2}$/ })
+      .first();
     if (await highBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
       await highBtn.click();
       await Promise.race([
@@ -93,16 +99,13 @@ test('TC17 – High page numbers beyond API limit @defect', async ({ homePage, p
   });
 });
 
-test('TC16c – Pagination visibility across categories @regression', async ({
-  homePage,
-  log,
-}) => {
-  await test.step('Popular has pagination', async () => {
+test('TC16c – Pagination visibility across categories @regression', async ({ homePage, log }) => {
+  await test.step('Arrange+Assert: Popular has pagination', async () => {
     expect(await homePage.results.hasPagination()).toBeTruthy();
     log.info('Popular pagination: visible');
   });
 
-  await test.step('Trend category — verify pagination state', async () => {
+  await test.step('Act+Assert: Trend category — verify pagination state', async () => {
     await homePage.selectCategory('Trend');
     const trendHasPagination = await homePage.results.hasPagination();
     expect(trendHasPagination).toBeDefined();
@@ -117,7 +120,7 @@ test('TC16c – Pagination visibility across categories @regression', async ({
     }
   });
 
-  await test.step('Verify Trend content loaded', async () => {
+  await test.step('Assert: Trend content loaded', async () => {
     await homePage.results.movieCards.first().waitFor({ state: 'visible', timeout: 10_000 });
     const cards = await homePage.results.cardCount();
     expect(cards).toBeGreaterThan(0);
@@ -125,17 +128,13 @@ test('TC16c – Pagination visibility across categories @regression', async ({
   });
 });
 
-test('TC18 – Page resets to 1 on category change @regression', async ({
-  homePage,
-  page,
-  log,
-}) => {
-  await test.step('Go to page 2', async () => {
+test('TC18 – Page resets to 1 on category change @regression', async ({ homePage, page, log }) => {
+  await test.step('Arrange: go to page 2', async () => {
     await homePage.results.goToNextPage();
     expect(await homePage.results.getCurrentPage()).toBe(2);
   });
 
-  await test.step('Switch to Top rated', async () => {
+  await test.step('Act+Assert: switch to Top rated', async () => {
     const apiPromise = waitForTmdbResponse(page, API_PATTERNS.topRatedPage1);
     await homePage.selectCategory('Top rated');
     const apiData = await apiPromise;

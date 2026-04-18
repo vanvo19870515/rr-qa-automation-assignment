@@ -3,9 +3,9 @@ import { env } from './config/env';
 
 export default defineConfig({
   testDir: './tests',
-  fullyParallel: true,
+  fullyParallel: !process.env.CI,
   forbidOnly: !!process.env.CI,
-  workers: process.env.CI ? 2 : undefined,
+  workers: process.env.CI ? 1 : undefined,
   timeout: 90_000,
   expect: { timeout: 10_000 },
 
@@ -19,7 +19,7 @@ export default defineConfig({
 
   use: {
     baseURL: env.baseUrl,
-    trace: 'retain-on-failure',
+    trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
     actionTimeout: env.timeouts.action,

@@ -115,6 +115,10 @@ export class HomePage extends BasePage {
   }
 
   private async waitForContentSettled(): Promise<void> {
-    await this.waitForContent([this.results.movieCards, this.results.noResults, this.results.errorMessage]);
+    await this.waitForContent([
+      this.results.movieCards,
+      this.results.noResults,
+      this.results.errorMessage,
+    ]);
   }
 }

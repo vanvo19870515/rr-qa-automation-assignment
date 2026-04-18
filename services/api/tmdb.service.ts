@@ -9,9 +9,7 @@ export class TmdbService extends ApiClient {
     super(request, env.tmdb.apiBase);
   }
 
-  private withKey(
-    params: Record<string, string | number> = {},
-  ): Record<string, string | number> {
+  private withKey(params: Record<string, string | number> = {}): Record<string, string | number> {
     if (env.tmdb.apiKey) {
       return { api_key: env.tmdb.apiKey, ...params };
     }
@@ -61,9 +59,7 @@ export class TmdbService extends ApiClient {
     return data;
   }
 
-  async discoverMovies(
-    params: Record<string, string | number> = {},
-  ): Promise<TmdbPageResponse> {
+  async discoverMovies(params: Record<string, string | number> = {}): Promise<TmdbPageResponse> {
     const data = await this.get<TmdbPageResponse>('discover/movie', this.withKey(params));
     assertTmdbPageResponse(data, 'discoverMovies');
     return data;

@@ -3,6 +3,10 @@
     "from": 2020,
     "to": 2023
   },
+  "invalidYearRange": {
+    "from": 2026,
+    "to": 2020
+  },
   "typeAndGenre": {
     "type": "TV Shows",
     "genre": "Drama",
