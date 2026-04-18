@@ -3,6 +3,7 @@ import { env } from './config/env';
 
 export default defineConfig({
   testDir: './tests',
+  outputDir: 'reports/artifacts',
   fullyParallel: !process.env.CI,
   forbidOnly: !!process.env.CI,
   workers: process.env.CI ? 1 : undefined,
@@ -13,7 +14,7 @@ export default defineConfig({
 
   reporter: [
     ['list'],
-    ['html', { outputFolder: 'reports', open: 'never' }],
+    ['html', { outputFolder: 'reports/html', open: 'never' }],
     ['json', { outputFile: 'reports/results.json' }],
   ],
 

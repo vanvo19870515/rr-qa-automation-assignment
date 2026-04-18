@@ -1,7 +1,6 @@
 import { test, expect } from '../../core/driver/base.fixture';
 import { waitForTmdbResponse } from '../../utils/network.interceptor';
 import { TMDB_MAX_PAGES, ITEMS_PER_PAGE, API_PATTERNS } from '../../config/constants';
-import { assertResultsLoaded } from './steps/discover.steps';
 
 test('TC16 – Navigate to page 2 @smoke', async ({ homePage, page, log }) => {
   // Arrange

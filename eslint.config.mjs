@@ -22,6 +22,6 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['node_modules/', 'dist/', 'reports/', 'test-results/', 'logs/', 'src/'],
+    ignores: ['node_modules/', 'dist/', 'reports/', 'test-results/', 'logs/'],
   },
 );
