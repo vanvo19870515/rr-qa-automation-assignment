@@ -1,30 +1,40 @@
 import { test as base } from '@playwright/test';
-import { DiscoverPage } from '../../pages/discover.page';
-import { TmdbService } from '../../api/endpoints/tmdb.service';
-import { logger as rootLogger } from '../logger/logger';
-
-interface TestLogger {
-  info: (msg: string) => void;
-  warn: (msg: string) => void;
-  error: (msg: string) => void;
-}
+import { HomePage } from '../../pages/home.page';
+import { FilterPanelPage } from '../../pages/filter-panel.page';
+import { ResultsPage } from '../../pages/results.page';
+import { TmdbService } from '../../services/api/tmdb.service';
+import { createTestLogger, type TestLogger } from '../../utils/logger';
 
 interface TestFixtures {
-  discoverPage: DiscoverPage;
-  app: DiscoverPage;
+  homePage: HomePage;
+  filterPanel: FilterPanelPage;
+  resultsPage: ResultsPage;
+  app: HomePage;
   api: TmdbService;
   log: TestLogger;
 }
 
 export const test = base.extend<TestFixtures>({
-  discoverPage: async ({ page }, use) => {
-    const discover = new DiscoverPage(page);
-    await discover.goto();
-    await use(discover);
+  homePage: async ({ page }, use) => {
+    const home = new HomePage(page);
+    await home.goto();
+    await use(home);
   },
 
-  app: async ({ page }, use) => {
-    await use(new DiscoverPage(page));
+  filterPanel: async ({ page }, use) => {
+    const home = new HomePage(page);
+    await home.goto();
+    await use(home.filters);
+  },
+
+  resultsPage: async ({ page }, use) => {
+    const home = new HomePage(page);
+    await home.goto();
+    await use(home.results);
+  },
+
+  app: async ({ homePage }, use) => {
+    await use(homePage);
   },
 
   api: async ({ request }, use) => {
@@ -33,12 +43,7 @@ export const test = base.extend<TestFixtures>({
 
   // eslint-disable-next-line no-empty-pattern
   log: async ({}, use, testInfo) => {
-    const prefix = testInfo.title.split(' ')[0];
-    await use({
-      info: (msg: string) => rootLogger.info(`[${prefix}] ${msg}`),
-      warn: (msg: string) => rootLogger.warn(`[${prefix}] ${msg}`),
-      error: (msg: string) => rootLogger.error(`[${prefix}] ${msg}`),
-    });
+    await use(createTestLogger(testInfo));
   },
 });
 

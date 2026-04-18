@@ -2,36 +2,36 @@ import type { Page, Locator } from '@playwright/test';
 import { logger } from '../core/logger/logger';
 
 /**
- * Reusable pagination component — Next, Previous, page number, state readers.
+ * Reusable pagination component for page navigation actions.
  */
 export class PaginationComponent {
   readonly container: Locator;
-  readonly prevButton: Locator;
+  readonly previousButton: Locator;
   readonly nextButton: Locator;
   readonly currentIndicator: Locator;
 
   constructor(private readonly page: Page) {
     this.container = page.locator('#react-paginate');
-    this.prevButton = page.getByRole('button', { name: 'Previous page' });
+    this.previousButton = page.getByRole('button', { name: 'Previous page' });
     this.nextButton = page.getByRole('button', { name: 'Next page' });
     this.currentIndicator = page.locator(
       'li.selected a, button[aria-current="page"], [aria-label*="is your current page"]',
     );
   }
 
-  async goNext(): Promise<void> {
+  async goToNextPage(): Promise<void> {
     await this.nextButton.click();
     logger.info('Pagination → Next');
   }
 
-  async goPrevious(): Promise<void> {
-    await this.prevButton.click();
+  async goToPreviousPage(): Promise<void> {
+    await this.previousButton.click();
     logger.info('Pagination → Previous');
   }
 
-  async goToPage(n: number): Promise<void> {
-    await this.page.getByRole('button', { name: `Page ${n}` }).click();
-    logger.info(`Pagination → page ${n}`);
+  async goToPage(pageNumber: number): Promise<void> {
+    await this.page.getByRole('button', { name: `Page ${pageNumber}` }).click();
+    logger.info(`Pagination → page ${pageNumber}`);
   }
 
   async currentPage(): Promise<number> {

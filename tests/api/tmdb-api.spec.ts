@@ -1,10 +1,10 @@
 import { test, expect } from '../../core/driver/base.fixture';
-import { ITEMS_PER_PAGE } from '../../core/config/constants';
-import { env } from '../../core/config/env';
+import { ITEMS_PER_PAGE } from '../../config/constants';
+import { env } from '../../config/env';
 import { loadFixture } from '../../utils/data.loader';
 
 interface SearchQuery { query: string; expectedMinResults?: number; matchPattern?: string; }
-const searchData = loadFixture('search-queries.json') as { validSearch: SearchQuery };
+const searchData = loadFixture<{ validSearch: SearchQuery }>('search-queries.json');
 const hasTmdbApiKey = Boolean(env.tmdb.apiKey);
 
 test.describe('TMDB API Contract Tests @regression', () => {
@@ -30,7 +30,8 @@ test.describe('TMDB API Contract Tests @regression', () => {
     const { query, matchPattern } = searchData.validSearch;
     const data = await api.searchMovies(query);
     expect(data.results.length).toBeGreaterThan(0);
-    const hasMatch = data.results.some((r) => new RegExp(matchPattern!, 'i').test(r.title ?? ''));
+    const regexPattern = matchPattern ?? query;
+    const hasMatch = data.results.some((r) => new RegExp(regexPattern, 'i').test(r.title ?? ''));
     expect(hasMatch).toBeTruthy();
   });
 

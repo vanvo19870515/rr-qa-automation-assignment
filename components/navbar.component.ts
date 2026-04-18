@@ -1,5 +1,5 @@
 import type { Page, Locator } from '@playwright/test';
-import { logger } from '../core/logger/logger';
+import { rootLogger } from '../utils/logger';
 
 type CategoryLabel = 'Popular' | 'Trend' | 'Newest' | 'Top rated';
 
@@ -19,11 +19,11 @@ export class NavbarComponent {
 
   async selectCategory(name: CategoryLabel): Promise<void> {
     await this.link(name).click();
-    logger.info(`Category → ${name}`);
+    rootLogger.info(`Category → ${name}`);
   }
 
   async search(query: string): Promise<void> {
     await this.searchInput.fill(query);
-    logger.info(`Search → "${query}"`);
+    rootLogger.info(`Search → "${query}"`);
   }
 }
