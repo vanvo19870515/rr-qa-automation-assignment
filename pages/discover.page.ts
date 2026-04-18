@@ -19,15 +19,33 @@ export class DiscoverPage extends BasePage {
   readonly navbar: NavbarComponent;
 
   // Exposed for direct test access
-  get searchInput() { return this.navbar.searchInput; }
-  get noResults() { return this.grid.noResults; }
-  get errorMessage() { return this.grid.errorMessage; }
-  get movieCards() { return this.grid.cards; }
-  get movieTitles() { return this.grid.titles; }
-  get movieMeta() { return this.grid.meta; }
-  get paginationPrev() { return this.pagination.prevButton; }
-  get paginationNext() { return this.pagination.nextButton; }
-  get paginationContainer() { return this.pagination.container; }
+  get searchInput() {
+    return this.navbar.searchInput;
+  }
+  get noResults() {
+    return this.grid.noResults;
+  }
+  get errorMessage() {
+    return this.grid.errorMessage;
+  }
+  get movieCards() {
+    return this.grid.cards;
+  }
+  get movieTitles() {
+    return this.grid.titles;
+  }
+  get movieMeta() {
+    return this.grid.meta;
+  }
+  get paginationPrev() {
+    return this.pagination.previousButton;
+  }
+  get paginationNext() {
+    return this.pagination.nextButton;
+  }
+  get paginationContainer() {
+    return this.pagination.container;
+  }
 
   constructor(page: import('@playwright/test').Page) {
     super(page);
@@ -101,13 +119,13 @@ export class DiscoverPage extends BasePage {
   // ── Pagination (delegates to pagination + waits) ──
 
   async goToNextPage(): Promise<this> {
-    await this.pagination.goNext();
+    await this.pagination.goToNextPage();
     await this.waitForContentSettled();
     return this;
   }
 
   async goToPreviousPage(): Promise<this> {
-    await this.pagination.goPrevious();
+    await this.pagination.goToPreviousPage();
     await this.waitForContentSettled();
     return this;
   }

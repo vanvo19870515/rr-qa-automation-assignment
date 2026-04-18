@@ -1,4 +1,4 @@
-import { logger } from '../core/logger/logger';
+import { rootLogger } from './logger';
 
 interface RetryOptions {
   attempts?: number;
@@ -6,10 +6,7 @@ interface RetryOptions {
   label?: string;
 }
 
-export async function retry<T>(
-  fn: () => Promise<T>,
-  options: RetryOptions = {},
-): Promise<T> {
+export async function retry<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
   const { attempts = 3, delay = 1_000, label = 'operation' } = options;
 
   for (let attempt = 1; attempt <= attempts; attempt++) {
@@ -18,10 +15,10 @@ export async function retry<T>(
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (attempt === attempts) {
-        logger.error(`${label} failed after ${attempts} attempts: ${message}`);
+        rootLogger.error(`${label} failed after ${attempts} attempts: ${message}`);
         throw error;
       }
-      logger.warn(`${label} attempt ${attempt}/${attempts} failed — retrying in ${delay}ms`);
+      rootLogger.warn(`${label} attempt ${attempt}/${attempts} failed — retrying in ${delay}ms`);
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }

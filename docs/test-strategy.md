@@ -1,88 +1,97 @@
 # Test Strategy – TMDB Discover
 
-## 1. Objective
+## 1) Objective
 
-Validate the **filter** and **pagination** functionality of the TMDB Discover SPA (`https://tmdb-discover.surge.sh/`) through automated end-to-end tests, supplemented with API-level assertions for data correctness.
+Build a stable, production-grade automation strategy for:
+https://tmdb-discover.surge.sh/
 
-## 2. Scope
+The strategy validates end-user behavior and backend contract integrity for:
+- category, type, year, rating, genre, and title filtering
+- pagination behavior including known broken last-page scenarios
+- UI and API consistency
 
-### In scope
+## 2) Strategy by test level
 
-| Area | Details |
-|------|---------|
-| Category navigation | Popular, Trend, Newest, Top Rated tabs |
-| Title search | Debounced text input searching the TMDB API |
-| Sidebar filters | Type (Movie / TV), Genre (multi-select), Year range, Rating stars |
-| Pagination | Page navigation via react-paginate (next/prev/page number) |
-| Negative / edge cases | Direct slug access (404), high page numbers, empty search results |
-| API validation | Intercept TMDB API responses and assert data matches UI |
+### UI (`tests/ui`)
+- validates visible behavior and user journeys
+- checks URL/query sync where relevant
+- includes edge and defect-aware checks
 
-### Out of scope
+### API (`tests/api`)
+- validates response status and schema
+- validates endpoint query behavior (`discover`, `search`, pagination)
+- cross-checks UI visible state versus API response data
 
-- Performance / load testing
-- Cross-browser beyond Chromium (can be added easily)
-- Accessibility audit (beyond what Playwright captures)
-- Mobile-responsive testing
+### E2E (`tests/e2e`)
+- validates full end-to-end flows combining category + filters + pagination
+- focuses on critical user journeys and defect-guarded boundaries
 
-## 3. Test Approach
+## 3) Design techniques (mandatory coverage)
 
-### 3.1 Test levels
+### Equivalence Partitioning
+- valid search vs nonsense search strings
+- movie vs TV type selection
+- available genre vs empty/invalid genre behavior
 
-- **E2E (UI):** Playwright browser automation against the live SPA.
-- **API assertions:** `page.waitForResponse` intercepts network calls; `page.request.get` for direct API validation.
+### Boundary Value Analysis
+- year range boundaries (valid order vs reversed range)
+- rating boundaries (low bound, high bound, out-of-range handling)
+- pagination boundaries:
+  - page 1
+  - middle page
+  - last-page/high-page known broken behavior
 
-### 3.2 Test design techniques
+### Negative testing
+- invalid category slug route (direct URL)
+- empty/no-result search
+- invalid pagination index behavior
+- unstable year filtering behavior
 
-| Technique | Applied to |
-|-----------|-----------|
-| Equivalence Partitioning | Type filter (Movie vs TV), valid/invalid search queries |
-| Boundary Value Analysis | Year range (min 1900, max current year), page numbers (1, 2, last) |
-| Decision Table | Combined filter combos (Genre + Rating + Year) |
-| Negative Testing | Direct slug URLs, non-existent search terms, pagination limits |
-| Exploratory (captured) | Known issues documented as defects |
+### Risk-based prioritization
+1. **High risk:** category/filter/search core flows and `/discover` query correctness
+2. **Medium risk:** pagination state synchronization and API page correctness
+3. **Medium/Low risk:** visual edge cases and defect-specific behaviors
 
-### 3.3 Test automation stack
+## 4) Coverage matrix
 
-| Component | Technology | Rationale |
-|-----------|-----------|-----------|
-| Framework | Playwright (TypeScript) | Multi-browser, built-in assertions, network interception, HTML reporter |
-| Logger | Winston | Structured file + console logging with timestamps |
-| Reporting | Playwright HTML + JSON reporter | Rich interactive report with traces, screenshots, video |
-| CI | GitHub Actions | Free, native Node.js support, artifact upload |
+| Area | Scenarios |
+|------|-----------|
+| Filters | valid year, invalid year order, rating bounds, empty genre behavior |
+| Categories | Popular, Trending, Newest, Top Rated |
+| Search | valid title, empty result, special characters, long input |
+| Pagination | page 1, middle pages, high/last page known bug, invalid page behavior |
+| API | schema validation, query-parameter validation, response/UI consistency |
 
-### 3.4 Design patterns
+## 5) API validation model
 
-- **Page Object Model (POM):** `DiscoverPage` encapsulates all locators and actions, isolating selectors from test logic.
-- **API Helper:** Reusable interceptor functions for TMDB API response validation.
-- **Centralized Logging:** Single Winston logger used across all files for consistent output.
+The framework validates both:
+1. **Intercepted browser traffic** (`waitForTmdbResponse*`) for request/response checks
+2. **Direct API service calls** (`TmdbService`) for contract-level checks
 
-## 4. Entry / Exit Criteria
+For `/discover` and pagination flows, the strategy verifies:
+- query parameters are present and expected
+- response body matches schema
+- UI rendered data stays consistent with API payload expectations
+
+## 6) Entry and exit criteria
 
 ### Entry
-- Target website is accessible
-- Node.js 18+ and Playwright browsers installed
-- TMDB API key is functional (embedded in the SPA)
+- AUT reachable
+- dependencies installed
+- Playwright browsers installed
+- optional `TMDB_API_KEY` available for full API coverage
 
 ### Exit
-- All planned test cases executed
-- All defects documented with evidence (screenshots, logs)
-- HTML report generated
+- lint + typecheck + formatting checks pass
+- UI/API/E2E command sets complete without critical failures
+- reports, screenshots, videos, traces, and API dump attachments generated for failures
+- known defects documented in `docs/defects.md`
 
-## 5. Risk Analysis
+## 7) Quality risk controls
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|-----------|
-| SPA hosted on surge.sh has no server-side routing | High | High | Test documents it as defect; tests navigate via root URL |
-| TMDB API rate limiting | Medium | Medium | Conservative parallelism; retries on CI |
-| react-select custom dropdowns hard to automate | Medium | Low | Use Playwright role selectors + text matching |
-| Pagination API limit (500 pages) vs UI showing 56000+ | High | Medium | Test documents as defect; test only first few pages deeply |
-
-## 6. CI Integration Approach
-
-GitHub Actions workflow triggers on push/PR to main:
-1. Checkout → Setup Node 18 → `npm ci`
-2. `npx playwright install --with-deps chromium`
-3. `npm test` (runs full suite)
-4. Upload `reports/` and `logs/` as artifacts
-
-See `.github/workflows/ci.yml` for implementation.
+| Risk | Mitigation |
+|------|------------|
+| Unstable AUT behavior | defect-annotated assertions and guarded skips where justified |
+| API variability/rate limits | retries + scoped assertions + deterministic interception |
+| Flaky browser timing | conservative CI workers, visibility waits, resilient selectors |
+| Broken deep-link routes | explicit negative tests and defects documentation |

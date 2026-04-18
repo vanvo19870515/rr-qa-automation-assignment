@@ -16,13 +16,15 @@
     "baseUrl": "."
   },
   "include": [
+    "src/**/*",
     "core/**/*",
-    "api/**/*",
+    "services/**/*",
+    "config/**/*",
+    "data/**/*",
     "pages/**/*",
     "components/**/*",
     "flows/**/*",
     "utils/**/*",
-    "testdata/**/*",
     "tests/**/*",
     "playwright.config.ts"
   ],

@@ -1,9 +1,6 @@
 /**
- * Shared constants — category mappings, genre IDs, API patterns, selector tokens.
- * Centralised so a single UI change is fixed in one place.
+ * Shared constants for UI/API testing.
  */
-
-// ── Category tab definitions ──
 
 export interface CategoryDef {
   label: 'Popular' | 'Trend' | 'Newest' | 'Top rated';
@@ -44,14 +41,6 @@ export const CATEGORIES: CategoryDef[] = [
   },
 ];
 
-/** Build a page-specific regex from a category for API interception */
-export function apiPatternForPage(cat: CategoryDef, page: number): RegExp {
-  const escaped = cat.movieEndpoint.replace(/\//g, '\\/');
-  return new RegExp(`${escaped}\\?page=${page}`);
-}
-
-// ── TMDB genre IDs (movie) ──
-
 export const GENRE_IDS = {
   Action: 28,
   Adventure: 12,
@@ -76,8 +65,6 @@ export const GENRE_IDS = {
 
 export type GenreName = keyof typeof GENRE_IDS;
 
-// ── API endpoint patterns for interception ──
-
 export const API_PATTERNS = {
   discoverMovie: /discover\/movie/,
   discoverMovieWithGenres: /discover\/movie.*with_genres/,
@@ -89,15 +76,8 @@ export const API_PATTERNS = {
   paginatedPage: (n: number) => new RegExp(`page=${n}`),
 } as const;
 
-// ── Items per page (TMDB default) ──
-
 export const ITEMS_PER_PAGE = 20;
-
-// ── TMDB API hard page cap ──
-
 export const TMDB_MAX_PAGES = 500;
-
-// ── Type filter options ──
 
 export const TYPE_OPTIONS = ['Movie', 'TV Shows'] as const;
 export type TypeOption = (typeof TYPE_OPTIONS)[number];

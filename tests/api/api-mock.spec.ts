@@ -1,13 +1,22 @@
 import { test, expect } from '../../core/driver/base.fixture';
-import { ITEMS_PER_PAGE } from '../../core/config/constants';
-import { env } from '../../core/config/env';
-import { MOCK_TWO_MOVIES, MOCK_EMPTY, MOCK_ERROR, MOCK_FULL_PAGE } from '../../testdata/mocks/movies.mock';
+import { ITEMS_PER_PAGE } from '../../config/constants';
+import { env } from '../../config/env';
+import {
+  MOCK_TWO_MOVIES,
+  MOCK_EMPTY,
+  MOCK_ERROR,
+  MOCK_FULL_PAGE,
+} from '../../data/mocks/movies.mock';
 
 test('TC19 – API mock: UI renders stubbed movie data @regression', async ({ app, page, log }) => {
   await test.step('Stub TMDB movie/popular with mock payload', async () => {
     await page.route(`${env.tmdb.apiBase}/movie/popular**`, (route) => {
       log.info('MOCK: intercepted movie/popular → returning 2 fake movies');
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_TWO_MOVIES) });
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(MOCK_TWO_MOVIES),
+      });
     });
   });
 
@@ -27,11 +36,19 @@ test('TC19 – API mock: UI renders stubbed movie data @regression', async ({ ap
   });
 });
 
-test('TC20 – API mock: empty response shows "No results" @regression', async ({ app, page, log }) => {
+test('TC20 – API mock: empty response shows "No results" @regression', async ({
+  app,
+  page,
+  log,
+}) => {
   await test.step('Stub movie/popular with empty results', async () => {
     await page.route(`${env.tmdb.apiBase}/movie/popular**`, (route) => {
       log.info('MOCK: returning empty');
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_EMPTY) });
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(MOCK_EMPTY),
+      });
     });
   });
 
@@ -46,7 +63,11 @@ test('TC21 – API mock: server error shows error state @regression', async ({ a
   await test.step('Stub movie/popular with 422 error', async () => {
     await page.route(`${env.tmdb.apiBase}/movie/popular**`, (route) => {
       log.info('MOCK: returning 422');
-      return route.fulfill({ status: 422, contentType: 'application/json', body: JSON.stringify(MOCK_ERROR) });
+      return route.fulfill({
+        status: 422,
+        contentType: 'application/json',
+        body: JSON.stringify(MOCK_ERROR),
+      });
     });
   });
 
@@ -57,10 +78,18 @@ test('TC21 – API mock: server error shows error state @regression', async ({ a
   });
 });
 
-test('TC22 – API mock: exactly 20 items renders correct card count @smoke', async ({ app, page, log }) => {
+test('TC22 – API mock: exactly 20 items renders correct card count @smoke', async ({
+  app,
+  page,
+  log,
+}) => {
   await test.step('Stub with exactly 20 items', async () => {
     await page.route(`${env.tmdb.apiBase}/movie/popular**`, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_FULL_PAGE) }),
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(MOCK_FULL_PAGE),
+      }),
     );
   });
 

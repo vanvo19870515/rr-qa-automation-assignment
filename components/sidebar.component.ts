@@ -1,5 +1,5 @@
 import type { Page, Locator } from '@playwright/test';
-import { logger } from '../core/logger/logger';
+import { rootLogger } from '../utils/logger';
 
 /**
  * Reusable sidebar component — Type, Genre, Year range, Rating.
@@ -15,13 +15,13 @@ export class SidebarComponent {
   async selectType(type: string): Promise<void> {
     await this.openReactSelect(0);
     await this.pickOption(type);
-    logger.info(`Type → ${type}`);
+    rootLogger.info(`Type → ${type}`);
   }
 
   async selectGenre(genre: string): Promise<void> {
     await this.openReactSelect(1);
     await this.pickOption(genre);
-    logger.info(`Genre → ${genre}`);
+    rootLogger.info(`Genre → ${genre}`);
   }
 
   async selectYearRange(from: number, to: number): Promise<void> {
@@ -32,7 +32,7 @@ export class SidebarComponent {
     await this.openReactSelect(3);
     await this.input(3).fill(String(to));
     await this.pickOption(String(to));
-    logger.info(`Year → ${from}–${to}`);
+    rootLogger.info(`Year → ${from}–${to}`);
   }
 
   async selectRating(stars: number): Promise<void> {
@@ -41,7 +41,7 @@ export class SidebarComponent {
     if (count > 0) {
       await radios.nth(Math.min(stars, count) - 1).click();
     }
-    logger.info(`Rating → ${stars}★ & up`);
+    rootLogger.info(`Rating → ${stars}★ & up`);
   }
 
   private input(index: number): Locator {

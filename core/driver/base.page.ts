@@ -1,6 +1,6 @@
 import { type Page, type Locator, type Response } from '@playwright/test';
-import { env } from '../config/env';
-import { logger } from '../logger/logger';
+import { env } from '../../config/env';
+import { rootLogger } from '../../utils/logger';
 import { retry } from '../../utils/retry.helper';
 
 /**
@@ -36,13 +36,13 @@ export abstract class BasePage {
         label: `navigate(${path})`,
       },
     );
-    logger.info(`Navigated to ${path}`);
+    rootLogger.info(`Navigated to ${path}`);
     return this;
   }
 
   async navigateRaw(path: string): Promise<Response | null> {
     const res = await this.page.goto(path, { waitUntil: 'domcontentloaded' });
-    logger.info(`Direct → ${path} | status ${res?.status()}`);
+    rootLogger.info(`Direct → ${path} | status ${res?.status()}`);
     return res;
   }
 

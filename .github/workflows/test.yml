@@ -1,0 +1,121 @@
+name: QA Test Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  TEST_ENV: prod
+  TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+
+jobs:
+  quality-gates:
+    name: Lint, typecheck and format check
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run quality gates
+        run: npm run validate
+
+  api-contract:
+    name: API contract tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    needs: quality-gates
+    steps:
+      - name: Check TMDB key
+        id: tmdb_key
+        run: |
+          if [ -n "${TMDB_API_KEY}" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::TMDB_API_KEY is not configured. API contract tests will be skipped."
+          fi
+
+      - name: Checkout
+        if: steps.tmdb_key.outputs.available == 'true'
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        if: steps.tmdb_key.outputs.available == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        if: steps.tmdb_key.outputs.available == 'true'
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        if: steps.tmdb_key.outputs.available == 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Run API tests
+        if: steps.tmdb_key.outputs.available == 'true'
+        run: npx playwright test tests/api/tmdb-api.spec.ts --project=chromium
+
+      - name: Upload API report artifacts
+        if: always() && steps.tmdb_key.outputs.available == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-report
+          path: |
+            reports/
+            test-results/
+          retention-days: 14
+
+  e2e-matrix:
+    name: E2E (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: quality-gates
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps ${{ matrix.browser }}
+
+      - name: Execute E2E suite
+        run: npx playwright test --project=${{ matrix.browser }} --reporter=line
+
+      - name: Upload E2E artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-${{ matrix.browser }}-artifacts
+          path: |
+            reports/
+            test-results/
+            logs/
+          retention-days: 14
