@@ -1,35 +1,36 @@
 import { test, expect } from '../../core/driver/base.fixture';
 import { waitForTmdbResponse } from '../../utils/network.interceptor';
-import { CATEGORIES, GENRE_IDS, ITEMS_PER_PAGE, API_PATTERNS } from '../../core/config/constants';
+import { CATEGORIES, GENRE_IDS, ITEMS_PER_PAGE, API_PATTERNS } from '../../config/constants';
 import { loadFixture } from '../../utils/data.loader';
-import { env } from '../../core/config/env';
+import { env } from '../../config/env';
 
 interface SearchQuery {
   query: string;
-  expectedMinResults?: number;
   expectedResults?: number;
   matchPattern?: string;
 }
 
-const searchData = loadFixture('search-queries.json') as {
+interface SearchFixture {
   validSearch: SearchQuery;
   emptySearch: SearchQuery;
-};
+}
+
+const searchData = loadFixture<SearchFixture>('search-queries.json');
 const hasTmdbApiKey = Boolean(env.tmdb.apiKey);
 
-test('TC01 – Home page loads with movie cards @smoke', async ({ discoverPage, page, log }) => {
+test('TC01 – Home page loads with movie cards @smoke', async ({ app, page, log }) => {
   await test.step('Verify URL redirected to /popular', async () => {
     await expect(page).toHaveURL(/popular/);
   });
 
   const count = await test.step('Verify movie cards are rendered', async () => {
-    const c = await discoverPage.cardCount();
+    const c = await app.cardCount();
     expect(c).toBe(ITEMS_PER_PAGE);
     return c;
   });
 
   await test.step('Verify first title is non-empty', async () => {
-    const titles = await discoverPage.titles();
+    const titles = await app.titles();
     expect(titles.length).toBeGreaterThan(0);
     expect(titles[0].trim().length).toBeGreaterThan(0);
     log.info(`${count} cards, first: "${titles[0]}"`);
@@ -37,14 +38,14 @@ test('TC01 – Home page loads with movie cards @smoke', async ({ discoverPage, 
 });
 
 if (hasTmdbApiKey) {
-  test('TC02 – Popular data matches TMDB API @smoke', async ({ discoverPage, api, page, log }) => {
+  test('TC02 – Popular data matches TMDB API @smoke', async ({ app, api, page, log }) => {
   await test.step('Verify URL is /popular', async () => {
     await expect(page).toHaveURL(/popular/);
   });
 
   await test.step('Cross-validate card count against API', async () => {
     const apiData = await api.popularMovies();
-    const uiCount = await discoverPage.cardCount();
+    const uiCount = await app.cardCount();
     expect(uiCount).toBe(apiData.results.length);
     log.info(`UI ${uiCount} == API ${apiData.results.length}`);
   });
@@ -56,13 +57,13 @@ if (hasTmdbApiKey) {
 }
 
 for (const cat of CATEGORIES.filter((c) => c.label !== 'Popular')) {
-  test(`TC03-05 – Navigate to ${cat.label} @regression`, async ({ discoverPage, page, log }) => {
-    const popularTitles = await discoverPage.titles();
+  test(`TC03-05 – Navigate to ${cat.label} @regression`, async ({ app, page, log }) => {
+    const popularTitles = await app.titles();
 
     await test.step(`Click "${cat.label}" tab`, async () => {
       const [apiData] = await Promise.all([
         waitForTmdbResponse(page, cat.apiPattern),
-        discoverPage.selectCategory(cat.label),
+        app.selectCategory(cat.label),
       ]);
       expect(apiData.results.length).toBeGreaterThan(0);
     });
@@ -72,7 +73,7 @@ for (const cat of CATEGORIES.filter((c) => c.label !== 'Popular')) {
     });
 
     await test.step('Verify content differs from Popular', async () => {
-      const newTitles = await discoverPage.titles();
+      const newTitles = await app.titles();
       expect(newTitles.length).toBeGreaterThan(0);
       expect(newTitles).not.toEqual(popularTitles);
       log.info(`${cat.label} → ${newTitles.length} items`);
@@ -99,53 +100,46 @@ test('TC06 – Direct slug /popular returns 404 @defect', async ({ app, page, lo
   });
 });
 
-test('TC07 – Search returns matching results @regression', async ({
-  discoverPage,
-  page,
-  log,
-}) => {
+test('TC07 – Search returns matching results @regression', async ({ app, page, log }) => {
   const { query, matchPattern } = searchData.validSearch;
 
   const apiCount = await test.step(`Type "${query}" and wait for API`, async () => {
     const apiPromise = waitForTmdbResponse(page, new RegExp(`search/movie.*query=${query}`, 'i'));
-    await discoverPage.searchByTitle(query);
+    await app.searchByTitle(query);
     const apiData = await apiPromise;
     expect(apiData.results.length).toBeGreaterThan(0);
     return apiData.results.length;
   });
 
   await test.step('Verify UI shows matching title', async () => {
-    const titles = await discoverPage.titles();
+    const titles = await app.titles();
     const match = titles.some((t) => new RegExp(matchPattern!, 'i').test(t));
     expect(match).toBeTruthy();
     log.info(`${titles.length} UI results, API ${apiCount}`);
   });
 });
 
-test('TC08 – Search for nonexistent title shows empty state @regression', async ({
-  discoverPage,
-  page,
-}) => {
+test('TC08 – Search for nonexistent title shows empty state @regression', async ({ app, page }) => {
   const { query, expectedResults } = searchData.emptySearch;
 
   await test.step(`Type "${query}"`, async () => {
     const pattern = new RegExp(`search/movie.*query=${query}`, 'i');
     const apiPromise = waitForTmdbResponse(page, pattern);
-    await discoverPage.searchByTitle(query);
+    await app.searchByTitle(query);
     const apiData = await apiPromise;
     expect(apiData.total_results).toBe(expectedResults);
   });
 
   await test.step('Verify "No results" message', async () => {
-    await expect(discoverPage.noResults).toBeVisible({ timeout: 5_000 });
+    await expect(app.noResults).toBeVisible({ timeout: 5_000 });
   });
 });
 
 if (hasTmdbApiKey) {
-  test('TC09 – Default type is Movie @smoke', async ({ discoverPage, api }) => {
+  test('TC09 – Default type is Movie @smoke', async ({ app, api }) => {
   await test.step('Cross-validate with API', async () => {
     const apiData = await api.popularMovies();
-    const uiCount = await discoverPage.cardCount();
+    const uiCount = await app.cardCount();
     expect(uiCount).toBe(apiData.results.length);
   });
   });
@@ -153,27 +147,27 @@ if (hasTmdbApiKey) {
   test.skip('TC09 – Default type is Movie @smoke', () => {});
 }
 
-test('TC10 – Switch to TV Shows @regression', async ({ discoverPage, page, log }) => {
+test('TC10 – Switch to TV Shows @regression', async ({ app, page, log }) => {
   await test.step('Select TV Shows from Type dropdown', async () => {
     const [apiData] = await Promise.all([
       waitForTmdbResponse(page, API_PATTERNS.tvPopular),
-      discoverPage.selectType('TV Shows'),
+      app.selectType('TV Shows'),
     ]);
     expect(apiData.results.length).toBeGreaterThan(0);
   });
 
   await test.step('Verify cards are displayed', async () => {
-    const titles = await discoverPage.titles();
+    const titles = await app.titles();
     expect(titles.length).toBeGreaterThan(0);
     log.info(`TV Shows → ${titles.length} items`);
   });
 });
 
-test('TC11 – Filter by genre Action @regression', async ({ discoverPage, page, log }) => {
+test('TC11 – Filter by genre Action @regression', async ({ app, page, log }) => {
   await test.step('Select Action genre', async () => {
     const [apiData] = await Promise.all([
       waitForTmdbResponse(page, API_PATTERNS.discoverMovieWithGenres),
-      discoverPage.selectGenre('Action'),
+      app.selectGenre('Action'),
     ]);
     const allAction = apiData.results.every((r) => r.genre_ids.includes(GENRE_IDS.Action));
     expect(allAction).toBeTruthy();
@@ -181,7 +175,7 @@ test('TC11 – Filter by genre Action @regression', async ({ discoverPage, page,
   });
 });
 
-test('TC12 – Filter by year range @regression', async ({ discoverPage, page, log }) => {
+test('TC12 – Filter by year range @regression', async ({ app, page, log }) => {
   const yearFrom = 2020;
   const yearTo = 2023;
 
@@ -191,7 +185,7 @@ test('TC12 – Filter by year range @regression', async ({ discoverPage, page, l
       { timeout: 30_000 },
     );
 
-    await discoverPage.selectYearRange(yearFrom, yearTo);
+    await app.selectYearRange(yearFrom, yearTo);
     const response = await apiPromise;
     const url = new URL(response.url());
     const yearFromParam = url.searchParams.get('release_date.gte');
@@ -229,52 +223,48 @@ test('TC12 – Filter by year range @regression', async ({ discoverPage, page, l
   });
 
   await test.step('Verify cards are displayed', async () => {
-    const count = await discoverPage.cardCount();
+    const count = await app.cardCount();
     expect(count).toBeGreaterThan(0);
     log.info(`${count} cards rendered after year filter`);
   });
 });
 
-test('TC13 – Filter by rating 3★ @regression', async ({ discoverPage, page, log }) => {
+test('TC13 – Filter by rating 3★ @regression', async ({ app, page, log }) => {
   await test.step('Click 3rd star', async () => {
     const apiPromise = waitForTmdbResponse(page, API_PATTERNS.discoverMovie);
-    await discoverPage.selectRating(3);
+    await app.selectRating(3);
     const apiData = await apiPromise;
     expect(apiData.results.length).toBeGreaterThan(0);
     log.info(`min rating = ${Math.min(...apiData.results.map((r) => r.vote_average))}`);
   });
 });
 
-test('TC14 – Fluent chain: switch type + genre filter @regression', async ({
-  discoverPage,
-  page,
-  log,
-}) => {
+test('TC14 – Fluent chain: switch type + genre filter @regression', async ({ app, page, log }) => {
   await test.step('Chain: selectType → selectGenre', async () => {
-    await discoverPage.selectType('TV Shows');
+    await app.selectType('TV Shows');
 
     const [apiData] = await Promise.all([
       waitForTmdbResponse(page, /discover\/tv.*with_genres/),
-      discoverPage.selectGenre('Drama'),
+      app.selectGenre('Drama'),
     ]);
     expect(apiData.results.length).toBeGreaterThan(0);
     log.info(`TV+Drama → ${apiData.results.length} results`);
   });
 
   await test.step('Verify cards rendered', async () => {
-    const count = await discoverPage.cardCount();
+    const count = await app.cardCount();
     expect(count).toBeGreaterThan(0);
   });
 });
 
-test('TC15 – Combined Genre + Rating filters @regression', async ({ discoverPage, page, log }) => {
+test('TC15 – Combined Genre + Rating filters @regression', async ({ app, page, log }) => {
   await test.step('Select Action genre', async () => {
-    await discoverPage.selectGenre('Action');
+    await app.selectGenre('Action');
   });
 
   await test.step('Set rating to 3★', async () => {
     const apiPromise = waitForTmdbResponse(page, API_PATTERNS.discoverMovie);
-    await discoverPage.selectRating(3);
+    await app.selectRating(3);
     const apiData = await apiPromise;
 
     expect(apiData.results.length).toBeGreaterThan(0);
@@ -284,13 +274,9 @@ test('TC15 – Combined Genre + Rating filters @regression', async ({ discoverPa
   });
 });
 
-test('DEF-03 – TV search calls search/movie instead of search/tv @defect', async ({
-  discoverPage,
-  page,
-  log,
-}) => {
+test('DEF-03 – TV search calls search/movie instead of search/tv @defect', async ({ app, page, log }) => {
   await test.step('Switch to TV Shows', async () => {
-    await discoverPage.selectType('TV Shows');
+    await app.selectType('TV Shows');
   });
 
   const { calledMovie, calledTv } = await test.step('Search and inspect endpoint', async () => {
@@ -298,7 +284,7 @@ test('DEF-03 – TV search calls search/movie instead of search/tv @defect', asy
       (res) => res.url().includes('/search/') && res.status() === 200,
       { timeout: 15_000 },
     );
-    await discoverPage.searchByTitle('Breaking Bad');
+    await app.searchByTitle('Breaking Bad');
     const response = await responsePromise;
     const url = response.url();
     log.info(`search URL = ${url}`);

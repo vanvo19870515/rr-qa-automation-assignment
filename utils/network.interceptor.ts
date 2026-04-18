@@ -1,7 +1,7 @@
 import type { Page, Response } from '@playwright/test';
-import type { TmdbPageResponse } from '../api/endpoints/tmdb.models';
-import { env } from '../core/config/env';
-import { logger } from '../core/logger/logger';
+import type { TmdbPageResponse } from '../services/api/models/tmdb.models';
+import { env } from '../config/env';
+import { rootLogger } from './logger';
 
 export async function waitForTmdbResponse(
   page: Page,
@@ -16,7 +16,7 @@ export async function waitForTmdbResponse(
   );
 
   const json = (await response.json()) as TmdbPageResponse;
-  logger.info(
+  rootLogger.info(
     `API ← ${response.url().replace(/api_key=[^&]+/, 'api_key=***')} | page ${json.page} | ` +
       `${json.results.length} items | total_pages ${json.total_pages}`,
   );

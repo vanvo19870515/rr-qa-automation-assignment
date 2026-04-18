@@ -1,0 +1,11 @@
+{
+  "validSearch": {
+    "query": "Inception",
+    "expectedMinResults": 1,
+    "matchPattern": "inception"
+  },
+  "emptySearch": {
+    "query": "xyz123nonexistent",
+    "expectedResults": 0
+  }
+}
