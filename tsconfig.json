@@ -17,7 +17,6 @@
   },
   "include": [
     "core/**/*",
-    "api/**/*",
     "services/**/*",
     "config/**/*",
     "data/**/*",
@@ -25,7 +24,6 @@
     "components/**/*",
     "flows/**/*",
     "utils/**/*",
-    "testdata/**/*",
     "tests/**/*",
     "playwright.config.ts"
   ],
